@@ -45,6 +45,8 @@ export const projects = [
         title: 'vibe',
         description: 'An advanced coding tool leveraging Google Gemini to support protobuf gRPC gateway files and Prisma schemas.',
         tags: ['AI', 'Gemini', 'Go', 'Prisma'],
+        link: 'https://github.com/Raezil/vibe'
+
     }
 ];
 
