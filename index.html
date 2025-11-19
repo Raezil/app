@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kamil Mościszko | Systems Architect & Developer</title>
+  <meta name="description" content="Portfolio of Kamil Mościszko, a systems architect specializing in Go and AI.">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="./style.css">
+</head>
+
+<body>
+  <div class="cursor-follower"></div>
+
+  <!-- Floating Gradient Orbs -->
+  <div class="gradient-orb gradient-orb-1"></div>
+  <div class="gradient-orb gradient-orb-2"></div>
+  <div class="gradient-orb gradient-orb-3"></div>
+
+  <nav>
+    <div class="logo">Raezil</div>
+    <div class="links">
+      <a href="#about">About</a>
+      <a href="#projects">Projects</a>
+      <a href="#contact">Contact</a>
+      <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+        <svg class="theme-toggle-icon sun-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+          stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+        <svg class="theme-toggle-icon moon-icon" style="display: none;" xmlns="http://www.w3.org/2000/svg" fill="none"
+          viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+      </button>
+    </div>
+  </nav>
+
+  <main>
+    <section id="hero">
+      <div class="hero-content">
+        <h1>Kamil Mościszko</h1>
+        <p class="subtitle">Architecting the future with <span class="highlight">Go</span> and <span
+            class="highlight">AI</span>.</p>
+        <div class="cta-container">
+          <a href="#projects" class="btn primary">View Work</a>
+          <a href="https://github.com/Raezil" target="_blank" class="btn secondary">GitHub</a>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <canvas id="neural-network"></canvas>
+      </div>
+    </section>
+
+    <section id="about">
+      <div class="section-header">
+        <h2>About Me</h2>
+      </div>
+      <div class="about-grid">
+        <div class="about-text">
+          <p>I am a systems architect and developer obsessed with building the infrastructure for the next generation of
+            AI. My work focuses on creating high-performance <strong>Go</strong> backends, defining open standards like
+            the <strong>Universal Tool Calling Protocol (UTCP)</strong>, and engineering autonomous agents that can
+            reason and act.</p>
+          <p>From designing lock-free event buses to implementing protocol buffers for GraphQL, I specialize in solving
+            complex architectural challenges. I am a core contributor to <strong>Protocol Lattice</strong>, where
+            I help shape the tools and frameworks that allow AI models to interact seamlessly with the real world.</p>
+        </div>
+        <div class="tech-stack">
+          <span class="tech-badge">Go</span>
+          <span class="tech-badge">gRPC</span>
+          <span class="tech-badge">GraphQL</span>
+          <span class="tech-badge">Protocol Buffers</span>
+          <span class="tech-badge">AI Agents</span>
+          <span class="tech-badge">LLMs</span>
+          <span class="tech-badge">UTCP</span>
+          <span class="tech-badge">MCP</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="projects">
+      <div class="section-header">
+        <h2>Selected Works</h2>
+      </div>
+      <div class="projects-grid" id="projects-container">
+        <!-- Projects injected via JS -->
+      </div>
+    </section>
+
+    <section id="organizations">
+      <div class="section-header">
+        <h2>Affiliations</h2>
+      </div>
+      <div class="org-container">
+        <!-- Organizations injected via JS -->
+      </div>
+    </section>
+
+    <section id="contact">
+      <div class="contact-section">
+        <h2>Let's Build Something Incredible</h2>
+        <p>Open for collaborations and interesting challenges.</p>
+        <a href="mailto:kmosc@protonmail.com" class="btn primary">Get in Touch</a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; 2025 Kamil Mościszko. Built with Vite & GSAP.</p>
+  </footer>
+
+  <script type="module" src="/main.js"></script>
+</body>
+
+</html>

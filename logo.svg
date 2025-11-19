@@ -1,0 +1,35 @@
+<svg width="400" height="400" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Outer hexagon frame -->
+  <path d="M200 40 L320 110 L320 250 L200 320 L80 250 L80 110 Z" 
+        stroke="currentColor" 
+        stroke-width="2" 
+        fill="none"
+        opacity="0.15"/>
+  
+  <!-- Inner geometric R -->
+  <g transform="translate(120, 120)">
+    <!-- Vertical line of R -->
+    <rect x="0" y="0" width="20" height="160" fill="currentColor" opacity="0.2"/>
+    
+    <!-- Top curve of R -->
+    <path d="M 20 0 L 100 0 Q 140 0 140 40 Q 140 80 100 80 L 20 80" 
+          fill="currentColor" 
+          opacity="0.2"/>
+    
+    <!-- Diagonal leg of R -->
+    <path d="M 70 80 L 140 160 L 115 160 L 50 85" 
+          fill="currentColor" 
+          opacity="0.2"/>
+    
+    <!-- Accent dots -->
+    <circle cx="150" cy="10" r="4" fill="currentColor" opacity="0.3"/>
+    <circle cx="150" cy="150" r="4" fill="currentColor" opacity="0.3"/>
+    <circle cx="10" cy="80" r="4" fill="currentColor" opacity="0.3"/>
+  </g>
+  
+  <!-- Decorative corner elements -->
+  <circle cx="60" cy="60" r="3" fill="currentColor" opacity="0.1"/>
+  <circle cx="340" cy="60" r="3" fill="currentColor" opacity="0.1"/>
+  <circle cx="60" cy="340" r="3" fill="currentColor" opacity="0.1"/>
+  <circle cx="340" cy="340" r="3" fill="currentColor" opacity="0.1"/>
+</svg>
