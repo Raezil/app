@@ -1,7 +1,7 @@
 import './style.css'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { projects, organizations } from './data.js'
+import { projects, organizations, blogPosts } from './data.js'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -117,6 +117,50 @@ if (orgContainer) {
 }
 
 
+// --- Render Blog Posts ---
+const blogContainer = document.getElementById('blog-container')
+if (blogContainer) {
+    blogContainer.innerHTML = ''
+    blogPosts.forEach(post => {
+        const card = document.createElement('div')
+        card.className = 'blog-card'
+        card.innerHTML = `
+            <div class="blog-content">
+                <div class="blog-meta">
+                    <span class="blog-date">${post.date}</span>
+                    <span class="blog-read-time">${post.readTime}</span>
+                </div>
+                <h3 class="blog-title">${post.title}</h3>
+                <p class="blog-excerpt">${post.excerpt}</p>
+                <div class="blog-tags">
+                    ${post.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                </div>
+            </div>
+            <a href="${post.link}" class="blog-link">Read Article →</a>
+        `
+
+        // Mouse tracking for spotlight effect
+        card.addEventListener('mousemove', (e) => {
+            const rect = card.getBoundingClientRect()
+            const x = e.clientX - rect.left
+            const y = e.clientY - rect.top
+            card.style.setProperty('--mouse-x', `${x}px`)
+            card.style.setProperty('--mouse-y', `${y}px`)
+        })
+
+        // Make whole card clickable
+        card.addEventListener('click', (e) => {
+            if (!e.target.closest('a')) {
+                window.location.href = post.link
+            }
+        })
+        card.style.cursor = 'pointer'
+
+        blogContainer.appendChild(card)
+    })
+}
+
+
 // --- Custom Cursor ---
 const cursor = document.querySelector('.cursor-follower')
 if (cursor) {
@@ -213,6 +257,21 @@ ScrollTrigger.batch('.org-card', {
 
 gsap.set('.org-card', { y: 30, opacity: 0 })
 
+// Stagger Blog Cards
+ScrollTrigger.batch('.blog-card', {
+    interval: 0.1,
+    onEnter: batch => gsap.to(batch, {
+        opacity: 1,
+        y: 0,
+        stagger: 0.15,
+        overwrite: true,
+        duration: 0.8,
+        ease: 'power3.out'
+    }),
+    start: 'top 90%'
+})
+
+gsap.set('.blog-card', { y: 30, opacity: 0 })
 
 // Add hover effect to tech badges
 const techBadges = document.querySelectorAll('.tech-badge')

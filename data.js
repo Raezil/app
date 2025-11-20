@@ -64,3 +64,15 @@ export const organizations = [
         link: 'https://github.com/Protocol-Lattice'
     }
 ];
+
+export const blogPosts = [
+    {
+        id: 'implementing-codemode-go-utcp',
+        title: 'Implementing CodeMode in go-utcp: Bridging LLMs and Tool Orchestration',
+        date: '2025-11-20',
+        readTime: '12 min read',
+        tags: ['Go', 'AI', 'UTCP', 'LLM', 'Architecture'],
+        excerpt: 'A deep dive into building CodeMode UTCP - a system that enables LLMs to orchestrate Universal Tool Calling Protocol tools by generating and executing Go-like code snippets in a sandboxed environment.',
+        link: '/blog/implementing-codemode-go-utcp.html'
+    }
+];
