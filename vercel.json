@@ -1,4 +1,10 @@
 {
+    "rewrites": [
+        {
+            "source": "/blog/:path*",
+            "destination": "/blog/:path*.html"
+        }
+    ],
     "headers": [
         {
             "source": "/(.*)",
