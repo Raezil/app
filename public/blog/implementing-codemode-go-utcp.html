@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Implementing CodeMode in go-utcp | Kamil Mościszko</title>
     <meta name="description"
-        content="A deep dive into building CodeMode UTCP - a system that enables LLMs to orchestrate Universal Tool Calling Protocol tools by generating and executing Go-like code snippets." />
+        content="Why LLMs are better at writing code than calling tools - and how CodeMode UTCP leverages this to build more capable AI agents." />
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -33,9 +33,9 @@
             <header class="post-header">
                 <div class="post-meta">
                     <span class="post-date">November 20, 2025</span>
-                    <span class="post-read-time">12 min read</span>
+                    <span class="post-read-time">15 min read</span>
                 </div>
-                <h1>Implementing CodeMode in go-utcp: Bridging LLMs and Tool Orchestration</h1>
+                <h1>Code Mode: Why LLMs Should Write Code, Not Call Tools</h1>
                 <div class="post-tags">
                     <span class="tag">Go</span>
                     <span class="tag">AI</span>
@@ -46,83 +46,120 @@
             </header>
 
             <div class="post-content">
-                <h2>Introduction</h2>
-                <p>One of the most challenging problems in AI agent development is enabling Large Language Models (LLMs)
-                    to
-                    effectively orchestrate multiple tools in complex workflows. While LLMs excel at understanding
-                    intent and
-                    generating code, they struggle with sequential tool decision-making and maintaining state across
-                    multiple API
-                    calls.</p>
+                <h2>The Problem with Tool Calling</h2>
+                <p>It turns out we've all been using tool-calling protocols wrong. Most AI agents today expose tools
+                    directly to LLMs using special tokens and JSON schemas. But there's a better way: <strong>let the
+                        LLM write code that calls an API</strong>.</p>
 
-                <p><strong>CodeMode UTCP</strong> solves this by allowing LLMs to generate Go-like code snippets that
-                    chain
-                    tools together, handle outputs, and produce structured results—all validated and executed in a
-                    sandboxed
-                    environment using the <a href="https://github.com/traefik/yaegi" target="_blank">Yaegi Go
-                        interpreter</a>.
+                <p>This article explores <strong>CodeMode UTCP</strong> - an implementation of this approach for the
+                    <a href="https://github.com/universal-tool-calling-protocol/go-utcp" target="_blank">Universal Tool
+                        Calling Protocol</a> that uses the <a href="https://github.com/traefik/yaegi"
+                        target="_blank">Yaegi Go interpreter</a> to safely execute LLM-generated code.
                 </p>
 
-                <p>This article explores the architecture, implementation challenges, and design decisions behind
-                    CodeMode UTCP,
-                    part of the <a href="https://github.com/universal-tool-calling-protocol/go-utcp"
-                        target="_blank">go-utcp</a> implementation.</p>
-
                 <hr>
 
-                <h2>The Problem: Sequential vs. Compositional Tool Calling</h2>
-                <p>Traditional LLM tool-calling approaches follow a sequential pattern:</p>
-                <ol>
-                    <li>LLM decides which tool to call</li>
-                    <li>Tool executes and returns result</li>
-                    <li>LLM receives result and decides next action</li>
-                    <li>Repeat until task complete</li>
-                </ol>
+                <h2>What's Wrong with Traditional Tool Calling?</h2>
 
-                <p>This creates several problems:</p>
+                <p>Under the hood, when an LLM uses a "tool," it generates special tokens that don't represent actual
+                    text. The LLM is trained to output these tokens in a specific format:</p>
+
+                <pre><code class="language-text">I will check the weather in Austin, TX.
+&lt;|tool_call|&gt; 
+{ 
+  "name": "get_weather", 
+  "arguments": { "location": "Austin, TX" } 
+} 
+&lt;|end_tool_call|&gt;</code></pre>
+
+                <p>The harness intercepts these special tokens, parses the JSON, calls the tool, and feeds the result
+                    back:</p>
+
+                <pre><code class="language-text">&lt;|tool_result|&gt; 
+{ 
+  "temperature": 93, 
+  "conditions": "sunny" 
+} 
+&lt;|end_tool_result|&gt;</code></pre>
+
+                <h3>The Core Issue</h3>
+
+                <p>These special tokens are things <strong>LLMs have never seen in the wild</strong>. They must be
+                    specially trained using synthetic data. As a result:</p>
+
                 <ul>
-                    <li><strong>High latency</strong>: Multiple round-trips between LLM and tools</li>
-                    <li><strong>State management</strong>: LLM must track intermediate results across turns</li>
-                    <li><strong>Error handling</strong>: Difficult to implement robust retry logic</li>
-                    <li><strong>Composability</strong>: Hard to express complex workflows like "search, filter, then
-                        summarize top
-                        3"</li>
+                    <li><strong>Limited capability</strong> - LLMs struggle with complex tools or too many options</li>
+                    <li><strong>Simplified APIs</strong> - Tool designers must "dumb down" their interfaces</li>
+                    <li><strong>Poor reliability</strong> - The LLM may choose the wrong tool or use it incorrectly
+                    </li>
                 </ul>
 
-                <p>CodeMode UTCP takes a different approach: <strong>the LLM generates a complete workflow as executable
-                        code</strong>, which runs to completion in one execution.</p>
+                <p>Meanwhile, LLMs are <em>excellent</em> at writing code. They've seen millions of real-world code
+                    examples from open source projects. <strong>Writing code and calling tools are almost the same
+                        thing</strong> - so why can LLMs do one much better than the other?</p>
+
+                <blockquote>
+                    <p>Making an LLM perform tasks with tool calling is like putting Shakespeare through a month-long
+                        class in Mandarin and then asking him to write a play in it. It's just not going to be his best
+                        work.</p>
+                </blockquote>
 
                 <hr>
 
-                <h2>Architecture Overview</h2>
-                <p>CodeMode UTCP consists of two main components:</p>
+                <h2>The Code Mode Solution</h2>
 
-                <h3>1. Orchestrator (<code>orchestrator.go</code>)</h3>
-                <p>The LLM-driven decision pipeline that:</p>
+                <p>Instead of asking the LLM to use special tokens, we:</p>
+
+                <ol>
+                    <li><strong>Convert tools into a code API</strong> - Generate type-safe function signatures from
+                        tool schemas</li>
+                    <li><strong>Ask the LLM to write code</strong> - Let it use its natural code-writing abilities</li>
+                    <li><strong>Execute in a sandbox</strong> - Run the generated code safely with access only to the
+                        tool API</li>
+                </ol>
+
+                <p>The results are striking. LLMs can now:</p>
                 <ul>
-                    <li>Determines if tools are needed for a given query</li>
-                    <li>Selects appropriate tools from available UTCP tools</li>
-                    <li>Generates Go code snippets using only selected tools</li>
+                    <li>Handle complex, multi-step workflows naturally</li>
+                    <li>Use full-featured APIs without simplification</li>
+                    <li>Implement proper error handling and retry logic</li>
+                    <li>Chain tool calls with conditional logic</li>
+                </ul>
+
+                <hr>
+
+                <h2>CodeMode UTCP Architecture</h2>
+
+                <p>Our Go implementation consists of two main components:</p>
+
+                <h3>1. The Orchestrator (<code>orchestrator.go</code>)</h3>
+                <p>An LLM-driven pipeline that:</p>
+                <ul>
+                    <li>Determines if tools are needed for a query</li>
+                    <li>Selects relevant tools from available UTCP tools</li>
+                    <li>Generates Go code using only selected tools</li>
                     <li>Validates generated code against strict rules</li>
                 </ul>
 
-                <h3>2. Code Execution Engine (<code>codemode.go</code>)</h3>
-                <p>The sandboxed runtime that:</p>
+                <h3>2. The Execution Engine (<code>codemode.go</code>)</h3>
+                <p>A sandboxed runtime that:</p>
                 <ul>
-                    <li>Uses Yaegi Go interpreter for safe code execution</li>
+                    <li>Uses Yaegi Go interpreter for safe execution</li>
                     <li>Injects helper functions for UTCP tool access</li>
-                    <li>Normalizes and wraps user code into valid Go programs</li>
-                    <li>Enforces timeouts and captures stdout/stderr</li>
+                    <li>Normalizes LLM output into valid Go programs</li>
+                    <li>Enforces timeouts and captures output</li>
                 </ul>
 
                 <hr>
 
                 <h2>The Four-Step Pipeline</h2>
-                <p>When <code>CallTool()</code> is invoked with a user prompt, the orchestrator executes four distinct
-                    steps:
-                </p>
+
+                <p>When a user makes a request, CodeMode UTCP executes four distinct steps:</p>
 
                 <h3>Step 1: Decide if Tools Are Needed</h3>
+
+                <p>First, we ask the LLM whether the query requires external tools at all:</p>
+
                 <pre><code class="language-go">func (cm *CodeModeUTCP) decideIfToolsNeeded(
     ctx context.Context,
     query string,
@@ -141,9 +178,12 @@ Respond ONLY in JSON: { "needs": true } or { "needs": false }
     // ... parse JSON response
 }</code></pre>
 
-                <p>This prevents unnecessary tool calls for simple queries that don't require external actions.</p>
+                <p>This prevents unnecessary tool calls for simple queries like "What is 2+2?"</p>
 
-                <h3>Step 2: Select Appropriate Tools</h3>
+                <h3>Step 2: Select Relevant Tools</h3>
+
+                <p>Next, we identify which specific tools are needed:</p>
+
                 <pre><code class="language-go">func (cm *CodeModeUTCP) selectTools(
     ctx context.Context,
     query string,
@@ -167,15 +207,14 @@ Rules:
 `, query, tools)
     
     raw, err := cm.model.Generate(ctx, prompt)
-    // ... parse JSON response
     // Returns: ["math.add", "math.multiply"]
 }</code></pre>
 
-                <p>The LLM identifies which tool names match the user's intent, ensuring only relevant tools are
-                    available during code generation.</p>
+                <p>This narrows the context to only relevant tools, improving code generation quality.</p>
 
-                <h3>Step 3: Generate Go Snippet</h3>
-                <p>This is where the magic happens. The LLM generates a Go code snippet following strict rules:</p>
+                <h3>Step 3: Generate Go Code</h3>
+
+                <p>Now comes the magic - the LLM writes actual Go code:</p>
 
                 <pre><code class="language-go">// Example generated code for: "Get sum of 5 and 7, then multiply by 3"
 
@@ -204,12 +243,15 @@ __out = map[string]any{
                 <ul>
                     <li>Use only selected tool names (no inventing tools)</li>
                     <li>Use exact input/output schema keys from tool specs</li>
-                    <li>No package/import declarations</li>
+                    <li>No package/import declarations (added automatically)</li>
                     <li>Assign final result to <code>__out</code> variable</li>
-                    <li>Use provided helper functions only</li>
+                    <li>Use only provided helper functions</li>
                 </ul>
 
-                <h3>Step 4: Execute and Return</h3>
+                <h3>Step 4: Execute in Sandbox</h3>
+
+                <p>Finally, we execute the code safely:</p>
+
                 <pre><code class="language-go">func (c *CodeModeUTCP) Execute(
     ctx context.Context,
     args CodeModeArgs,
@@ -253,19 +295,15 @@ __out = map[string]any{
     }
 }</code></pre>
 
-                <p>The generated code is executed in a sandboxed Yaegi interpreter with timeout protection and panic
-                    recovery.
-                </p>
-
                 <hr>
 
-                <h2>Code Normalization: Making LLM Output Executable</h2>
-                <p>LLMs don't always generate perfect Go code. CodeMode includes several normalization steps:</p>
+                <h2>Making LLM Output Executable</h2>
+
+                <p>LLMs don't always generate perfect Go code. We apply several normalization steps:</p>
 
                 <h3>1. Package/Import Stripping</h3>
                 <p>LLMs often include <code>package main</code> or <code>import</code> statements. We strip these since
-                    the
-                    wrapper adds them automatically.</p>
+                    the wrapper adds them automatically.</p>
 
                 <h3>2. Walrus Operator Conversion</h3>
                 <pre><code class="language-go">func convertOutWalrus(code string) string {
@@ -275,11 +313,11 @@ __out = map[string]any{
     return re.ReplaceAllString(code, "__out = ")
 }</code></pre>
 
-                <p>The <code>__out</code> variable is pre-declared in the wrapper, so <code>:=</code> would cause a
-                    redeclaration error.</p>
+                <p>The <code>__out</code> variable is pre-declared, so <code>:=</code> would cause a redeclaration
+                    error.</p>
 
                 <h3>3. JSON to Go Literal Conversion</h3>
-                <p>LLMs sometimes output JSON objects instead of Go map literals. This converts them automatically:</p>
+                <p>LLMs sometimes output JSON objects instead of Go map literals:</p>
 
                 <pre><code class="language-go">func toGoLiteral(v any) string {
     switch val := v.(type) {
@@ -291,13 +329,22 @@ __out = map[string]any{
         }
         return fmt.Sprintf("map[string]any{%s,}", 
             strings.Join(parts, ", "))
+    case []any:
+        items := make([]string, len(val))
+        for i := range val {
+            items[i] = toGoLiteral(val[i])
+        }
+        return fmt.Sprintf("[]any{%s}", strings.Join(items, ", "))
+    case string:
+        return fmt.Sprintf("%q", val)
     // ... other cases
     }
 }</code></pre>
 
                 <hr>
 
-                <h2>Injecting UTCP Helpers</h2>
+                <h2>Injecting the Tool API</h2>
+
                 <p>The sandboxed environment needs access to UTCP tools. We inject helper functions using Yaegi's
                     reflection-based exports:</p>
 
@@ -330,35 +377,38 @@ __out = map[string]any{
     return i.Use(exports)
 }</code></pre>
 
-                <p>These functions are available in generated code as <code>codemode.CallTool()</code>,
+                <p>These functions become available in generated code as <code>codemode.CallTool()</code>,
                     <code>codemode.Sprintf()</code>, etc.
                 </p>
 
                 <hr>
 
-                <h2>Security and Safety</h2>
-                <p>Running LLM-generated code requires careful sandboxing:</p>
+                <h2>Security: Sandboxing LLM-Generated Code</h2>
+
+                <p>Running code written by an LLM requires careful isolation:</p>
 
                 <h3>1. Yaegi Interpreter</h3>
                 <ul>
-                    <li>No access to filesystem or network (unless explicitly provided)</li>
-                    <li>No ability to spawn processes</li>
-                    <li>Runs in same process but isolated namespace</li>
+                    <li><strong>No filesystem access</strong> - Unless explicitly provided via helpers</li>
+                    <li><strong>No network access</strong> - Isolated from the Internet</li>
+                    <li><strong>No process spawning</strong> - Cannot execute external commands</li>
+                    <li><strong>Isolated namespace</strong> - Runs in same process but separate context</li>
                 </ul>
 
                 <h3>2. Timeout Enforcement</h3>
-                <p>Default 30s timeout prevents infinite loops.</p>
+                <p>Default 30-second timeout prevents infinite loops and runaway execution.</p>
 
                 <h3>3. Panic Recovery</h3>
-                <p>Interpreter panics are caught and returned as errors.</p>
+                <p>Interpreter panics are caught and returned as structured errors, preventing crashes.</p>
 
                 <h3>4. Validation Rules</h3>
-                <p>Basic syntax validation before execution ensures code contains required elements.</p>
+                <p>Basic syntax validation ensures code contains required elements before execution.</p>
 
                 <hr>
 
                 <h2>Real-World Example</h2>
-                <p>Let's walk through a complete example:</p>
+
+                <p>Let's walk through a complete workflow:</p>
 
                 <p><strong>User Query:</strong> "Search for Python tutorials and summarize the top 3 results"</p>
 
@@ -411,33 +461,70 @@ __out = map[string]any{
 
                 <h3>Step 4: Execute</h3>
                 <p>The code runs in the Yaegi sandbox, calls the actual UTCP tools, and returns structured results—all
-                    in one
-                    execution.</p>
+                    in one execution.</p>
 
                 <hr>
 
-                <h2>Conclusion</h2>
-                <p>CodeMode UTCP demonstrates that <strong>LLMs can be effective orchestrators</strong> when given the
-                    right
-                    abstractions. By generating executable code instead of making sequential decisions, we achieve:</p>
+                <h2>Why This Works Better</h2>
+
+                <p>CodeMode UTCP demonstrates that <strong>code is a better interface for tool orchestration than
+                        special tokens</strong>. By leveraging LLMs' natural code-writing abilities, we achieve:</p>
 
                 <ul>
                     <li>✅ <strong>Lower latency</strong> - One execution vs. multiple round-trips</li>
                     <li>✅ <strong>Better composability</strong> - Express complex workflows naturally</li>
                     <li>✅ <strong>Robust error handling</strong> - Standard Go error patterns</li>
-                    <li>✅ <strong>Type safety</strong> - Validated against tool schemas</li>
+                    <li>✅ <strong>Full API access</strong> - No need to simplify tool interfaces</li>
+                    <li>✅ <strong>Higher reliability</strong> - LLMs excel at writing code</li>
                     <li>✅ <strong>Debuggability</strong> - Inspect generated code and execution logs</li>
                 </ul>
 
-                <p>The key insight is that <strong>code is a better interface for tool orchestration than
-                        JSON-RPC</strong>.
-                    LLMs already understand code structure, control flow, and error handling—we just need to provide the
-                    right
-                    runtime environment.</p>
+                <p>The key insight: <strong>LLMs have seen millions of code examples but only synthetic tool-calling
+                        data</strong>. We should play to their strengths.</p>
+
+                <hr>
+
+                <h2>Performance Characteristics</h2>
+
+                <h3>Latency Breakdown</h3>
+                <ul>
+                    <li><strong>LLM calls:</strong> 3 sequential calls (decide, select, generate) ≈ 2-5 seconds</li>
+                    <li><strong>Code execution:</strong> Typically <100ms for simple workflows</li>
+                    <li><strong>Tool calls:</strong> Depends on tool implementation</li>
+                </ul>
+
+                <h3>Optimization Opportunities</h3>
+                <ul>
+                    <li><strong>Parallel LLM calls</strong> - Decide + Select could run concurrently</li>
+                    <li><strong>Caching</strong> - Cache tool specs to reduce prompt size</li>
+                    <li><strong>Streaming</strong> - Stream code generation for faster perceived latency</li>
+                    <li><strong>Compiled mode</strong> - Pre-compile common patterns</li>
+                </ul>
+
+                <hr>
+
+                <h2>Limitations and Trade-offs</h2>
+
+                <h3>Current Limitations</h3>
+                <ul>
+                    <li><strong>Single-threaded execution</strong> - Yaegi runs code sequentially</li>
+                    <li><strong>No filesystem access</strong> - Unless explicitly provided via helpers</li>
+                    <li><strong>LLM quality dependency</strong> - Bad code generation = runtime errors</li>
+                    <li><strong>Debugging complexity</strong> - Stack traces from interpreted code can be cryptic</li>
+                </ul>
+
+                <h3>Design Trade-offs</h3>
+                <ul>
+                    <li><strong>Safety vs. Flexibility</strong> - Sandboxing limits what code can do</li>
+                    <li><strong>Simplicity vs. Power</strong> - Go DSL is more constrained than Python</li>
+                    <li><strong>Latency vs. Reliability</strong> - Multiple LLM calls increase latency but improve
+                        correctness</li>
+                </ul>
 
                 <hr>
 
                 <h2>Try It Yourself</h2>
+
                 <p>CodeMode UTCP is part of the <a href="https://github.com/universal-tool-calling-protocol/go-utcp"
                         target="_blank">go-utcp</a> repository:</p>
 
@@ -451,16 +538,17 @@ go test -v</code></pre>
 
                 <hr>
 
-                <h2>Acknowledgments</h2>
-                <p>CodeMode UTCP builds on:</p>
+                <h2>Related Work</h2>
+
+                <p>CodeMode UTCP builds on ideas from:</p>
                 <ul>
+                    <li><a href="https://blog.cloudflare.com/code-mode/" target="_blank">Cloudflare's Code Mode</a> -
+                        TypeScript-based approach for MCP</li>
                     <li><a href="https://github.com/traefik/yaegi" target="_blank">Yaegi</a> - Go interpreter</li>
                     <li><a href="https://github.com/universal-tool-calling-protocol" target="_blank">UTCP</a> -
-                        Universal Tool
-                        Calling Protocol</li>
+                        Universal Tool Calling Protocol</li>
                     <li><a href="https://github.com/Protocol-Lattice" target="_blank">Protocol Lattice</a> - AI
-                        infrastructure
-                        ecosystem</li>
+                        infrastructure ecosystem</li>
                 </ul>
 
                 <p>Special thanks to the UTCP community for feedback and contributions.</p>
