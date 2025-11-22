@@ -592,5 +592,142 @@ Special thanks to the UTCP community for feedback and contributions.
 
 *Have questions or ideas? Reach out on [GitHub](https://github.com/universal-tool-calling-protocol/go-utcp/issues) or [email me](mailto:kmosc@protonmail.com).*
         `
+    },
+    {
+        id: 'agents-as-utcp-tools',
+        title: 'Agents as UTCP Tools: Unlocking Powerful Workflows with CodeMode',
+        date: '2025-11-22',
+        readTime: '10 min read',
+        tags: ['Agents', 'UTCP', 'CodeMode', 'Go', 'Multi-Agent'],
+        excerpt: 'Discover how exposing autonomous agents as UTCP tools enables complex, multi-agent workflows orchestrated by CodeMode, transforming how we build AI systems.',
+        content: `
+# Agents as UTCP Tools: Unlocking Powerful Workflows with CodeMode
+
+## Introduction
+
+As we move beyond simple chatbots to autonomous agents, the need for coordination becomes paramount. Single agents are powerful, but **multi-agent systems**—where specialists collaborate—are the future of complex problem-solving.
+
+But how do you coordinate these agents? How does a "Manager" agent effectively delegate tasks to a "Coder" or a "Researcher"?
+
+The answer lies in a powerful paradigm shift: **treating agents as tools**.
+
+By exposing agents as **Universal Tool Calling Protocol (UTCP)** tools, we can leverage the full power of **CodeMode** to orchestrate them programmatically. This article explores how this combination creates a flexible, robust framework for building advanced AI workflows.
+
+---
+
+## The Concept: Agents as Tools
+
+At its core, an agent is an entity that performs a task. It takes an input (a goal or instruction) and produces an output (a result or artifact).
+
+This signature—\`Input -> Output\`—is identical to that of a **Tool**.
+
+By wrapping an agent in a UTCP tool definition, we standardize its interface. To the outside world, the agent becomes just another function call: \`CallTool("agent.coder", { "task": "..." })\`.
+
+### Why is this powerful?
+
+1.  **Abstraction**: The caller doesn't need to know *how* the agent works (what model it uses, its internal prompts, its memory). It just sends a task and awaits a result.
+2.  **Composability**: Agents can call other agents. A "Research Agent" might use a "Search Agent" as a tool.
+3.  **Standardization**: UTCP provides a common language for discovery and execution.
+
+In the \`go-agent\` framework, this is achieved with a simple helper:
+
+\`\`\`go
+// Expose the 'coder' agent as a UTCP tool
+tool := agent.AsUTCPTool(coderAgent, "agent.coder", "A specialist coding agent")
+\`\`\`
+
+---
+
+## The Orchestrator: CodeMode
+
+If agents are the workers, **CodeMode** is the conductor.
+
+[CodeMode](https://github.com/universal-tool-calling-protocol/go-utcp) allows an LLM to generate and execute Go code to solve problems. When we give CodeMode access to our "Agent Tools", it gains the ability to **program the workforce**.
+
+Instead of a fragile chain of prompts ("Ask Coder to do X, then ask Reviewer to check it"), CodeMode generates **executable logic**:
+
+- **Loops**: "Keep asking the Coder to fix bugs until the Reviewer passes it."
+- **Conditionals**: "If the task is simple, do it yourself; otherwise, call the Specialist."
+- **Parallelism**: "Task three agents to propose solutions, then pick the best one."
+
+---
+
+## Example Workflow: The Software Factory
+
+Let's visualize a "Software Factory" workflow orchestrated by CodeMode.
+
+**The Team:**
+1.  **Manager** (Running CodeMode)
+2.  **Coder** (Agent exposed as \`agent.coder\`)
+3.  **Reviewer** (Agent exposed as \`agent.reviewer\`)
+
+**The Task:** "Implement a thread-safe Queue in Go."
+
+**The CodeMode Execution:**
+
+The Manager receives the request and generates the following Go code (simplified):
+
+\`\`\`go
+// Step 1: Ask Coder to implement the feature
+codeResult, err := codemode.CallTool("agent.coder", map[string]any{
+    "task": "Implement a thread-safe Queue in Go with Push/Pop methods.",
+})
+if err != nil { return err }
+
+implementation := codeResult.(string)
+
+// Step 2: The Feedback Loop
+maxRetries := 3
+for i := 0; i < maxRetries; i++ {
+    // Ask Reviewer to check the code
+    reviewResult, _ := codemode.CallTool("agent.reviewer", map[string]any{
+        "code": implementation,
+    })
+    
+    review := reviewResult.(map[string]any)
+    if review["status"] == "approved" {
+        break // Success!
+    }
+    
+    // If rejected, ask Coder to fix it based on feedback
+    fixResult, _ := codemode.CallTool("agent.coder", map[string]any{
+        "task": "Fix the code based on this review: " + review["feedback"].(string),
+        "current_code": implementation,
+    })
+    implementation = fixResult.(string)
+}
+
+__out = implementation
+\`\`\`
+
+### What just happened?
+
+1.  The Manager **dynamically defined a workflow** involving multiple sub-agents.
+2.  It implemented **logic** (the retry loop) that would be difficult to express in a pure prompt chain.
+3.  It handled **state** (passing \`implementation\` between agents).
+
+---
+
+## Benefits of this Architecture
+
+### 1. Separation of Concerns
+Each agent is specialized. The Coder knows Go syntax. The Reviewer knows security best practices. The Manager (CodeMode) knows *process*. You can upgrade the Coder agent without breaking the workflow.
+
+### 2. Resilience
+Because the workflow is defined in code, it's deterministic and debuggable. If the loop runs too many times, we can log it, handle the error, or escalate.
+
+### 3. Infinite Scalability
+Need a "Security Auditor"? Just add \`agent.auditor\` as a tool. The Manager can now choose to call it for sensitive tasks.
+
+---
+
+## Conclusion
+
+Treating agents as UTCP tools and orchestrating them with CodeMode represents a significant leap forward in AI engineering. It moves us from **chatting with models** to **programming with intelligence**.
+
+By combining the **creativity** of autonomous agents with the **structure** of code, we can build systems that are not just smart, but reliable, scalable, and capable of tackling truly complex engineering challenges.
+
+The future of software development isn't just AI writing code—it's AI managing AI to build software.
+        `
     }
 ];

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agents as UTCP Tools: The Ultimate Composability Hack | Kamil Mościszko</title>
+    <meta name="description"
+        content="Discover how to expose autonomous agents as UTCP tools, enabling recursive agent composition and powerful hierarchical workflows." />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="/blog-style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+</head>
+
+<body>
+    <nav>
+        <a href="/index.html" class="logo">← Back to Portfolio</a>
+        <div class="links">
+            <a href="/index.html#about">About</a>
+            <a href="/index.html#projects">Projects</a>
+            <a href="/index.html#blog">Blog</a>
+        </div>
+    </nav>
+
+    <main class="blog-post">
+        <article>
+            <header class="post-header">
+                <div class="post-meta">
+                    <span class="post-date">November 22, 2025</span>
+                    <span class="post-read-time">8 min read</span>
+                </div>
+                <h1>Agents as UTCP Tools: The Ultimate Composability Hack</h1>
+                <div class="post-tags">
+                    <span class="tag">Go</span>
+                    <span class="tag">AI</span>
+                    <span class="tag">UTCP</span>
+                    <span class="tag">Agents</span>
+                    <span class="tag">Composability</span>
+                </div>
+            </header>
+
+            <div class="post-content">
+                <h2>Introduction</h2>
+                <p>In the world of AI engineering, we typically think of <strong>Agents</strong> as the callers and <strong>Tools</strong> as the callees. An agent receives a task, reasons about it, and calls various tools (calculators, web search, APIs) to complete it.</p>
+
+                <p>But what if we flipped the script? <strong>What if an Agent could be a Tool?</strong></p>
+
+                <p>This simple conceptual shift unlocks powerful architectural patterns: hierarchical swarms, recursive delegation, and specialized agent teams. By exposing agents as standard UTCP (Universal Tool Calling Protocol) tools, we can compose them just like any other function.</p>
+
+                <hr>
+
+                <h2>The "Agent as a Tool" Paradigm</h2>
+
+                <p>At its core, an autonomous agent is a system that:</p>
+                <ol>
+                    <li>Accepts a natural language instruction (Input)</li>
+                    <li>Performs a series of reasoning and execution steps</li>
+                    <li>Returns a final result or confirmation (Output)</li>
+                </ol>
+
+                <p>This signature—<code>func(instruction string) string</code>—maps perfectly to a Tool definition.</p>
+
+                <p>By wrapping an agent in a UTCP Tool interface, we allow <em>other</em> agents (or systems like CodeMode) to invoke it without knowing it's an AI. To the caller, it's just a "black box" function that gets the job done.</p>
+
+                <h3>Why is this powerful?</h3>
+
+                <ul>
+                    <li><strong>Hierarchical Composition</strong>: A "Manager Agent" can delegate tasks to a "Coder Agent" and a "QA Agent" simply by calling them as tools.</li>
+                    <li><strong>Encapsulation</strong>: You can build a highly complex "Research Agent" with its own memory, tools, and prompts, and expose it as a simple <code>research.deep_dive</code> tool.</li>
+                    <li><strong>Standardization</strong>: UTCP provides the universal interface. You don't need custom orchestration logic; just standard tool calling.</li>
+                </ul>
+
+                <hr>
+
+                <h2>Implementation in go-utcp</h2>
+
+                <p>The <code>go-utcp</code> library makes this trivial with the <code>agent.AsUTCPTool</code> and <code>agent.RegisterAsUTCPProvider</code> functions.</p>
+
+                <h3>1. Defining a Specialized Agent</h3>
+
+                <p>First, let's create a simple agent designed to write Git commit messages.</p>
+
+                <pre><code class="language-go">// Create a specialized agent
+gitAgent := agent.NewAgent(agent.Config{
+    Name:        "GitCommitAgent",
+    Model:       model,
+    SystemPrompt: "You are an expert at writing conventional commit messages.",
+})</code></pre>
+
+                <h3>2. Exposing it as a Tool</h3>
+
+                <p>Now, we convert this agent into a UTCP tool and register it.</p>
+
+                <pre><code class="language-go">// Convert agent to a tool
+// The description helps the caller understand when to use this agent
+gitTool := agent.AsUTCPTool(
+    gitAgent, 
+    "Generate a conventional commit message for the given changes",
+)
+
+// Register it on a server or provider
+server.RegisterTool(gitTool)</code></pre>
+
+                <p>The resulting tool will have:</p>
+                <ul>
+                    <li><strong>Name</strong>: <code>agent.GitCommitAgent</code></li>
+                    <li><strong>Input</strong>: <code>{ "instruction": "string" }</code></li>
+                    <li><strong>Output</strong>: The agent's final response.</li>
+                </ul>
+
+                <hr>
+
+                <h2>Supercharging with CodeMode</h2>
+
+                <p>The real magic happens when you combine <strong>Agent Tools</strong> with <strong>CodeMode</strong>.</p>
+
+                <p>CodeMode allows an LLM to generate code to orchestrate tools. When agents are tools, CodeMode can write programs that manage entire teams of AI agents.</p>
+
+                <p>Imagine a "Software Lead" agent using CodeMode to orchestrate a feature implementation:</p>
+
+                <pre><code class="language-go">// CodeMode generated script
+
+// 1. Ask the Researcher Agent to find best practices
+research, err := codemode.CallTool("agent.Researcher", map[string]any{
+    "instruction": "Find best practices for implementing JWT auth in Go",
+})
+if err != nil { return err }
+
+// 2. Ask the Coder Agent to write the implementation
+code, err := codemode.CallTool("agent.GoCoder", map[string]any{
+    "instruction": fmt.Sprintf("Implement JWT auth using these guidelines: %s", research),
+})
+if err != nil { return err }
+
+// 3. Ask the Reviewer Agent to check the code
+review, err := codemode.CallTool("agent.CodeReviewer", map[string]any{
+    "instruction": fmt.Sprintf("Review this code for security flaws: %s", code),
+})
+
+__out = review</code></pre>
+
+                <p>In this workflow:</p>
+                <ul>
+                    <li>The <strong>Orchestrator</strong> (running CodeMode) writes the logic.</li>
+                    <li>The <strong>Sub-Agents</strong> (Researcher, Coder, Reviewer) execute complex tasks.</li>
+                    <li>State is passed seamlessly between them via variables.</li>
+                </ul>
+
+                <hr>
+
+                <h2>Benefits of this Architecture</h2>
+
+                <h3>1. Infinite Scalability</h3>
+                <p>You can nest agents arbitrarily deep. A "Frontend Agent" might call a "React Component Agent", which calls a "CSS Agent".</p>
+
+                <h3>2. Fault Tolerance</h3>
+                <p>Since each agent is just a tool call, the orchestrator can implement retry logic, timeout handling, and fallback strategies (e.g., "If Coder Agent fails, try Junior Coder Agent").</p>
+
+                <h3>3. Cognitive Offloading</h3>
+                <p>The top-level agent doesn't need to know <em>how</em> to write CSS or query a database. It just needs to know which "employee" (Agent Tool) to ask. This reduces the context window pressure on the primary model.</p>
+
+                <hr>
+
+                <h2>Conclusion</h2>
+
+                <p>Treating Agents as Tools is a paradigm shift that moves us from "Single God-Mode Agents" to "Collaborative Agent Swarms."</p>
+
+                <p>By leveraging UTCP as the glue and CodeMode as the orchestrator, we can build software systems that are:</p>
+                <ul>
+                    <li><strong>Modular</strong>: Swap out agents without breaking the system.</li>
+                    <li><strong>Composable</strong>: Build complex workflows from simple building blocks.</li>
+                    <li><strong>Powerful</strong>: Leverage the collective intelligence of specialized models.</li>
+                </ul>
+
+                <p>The future isn't just one AI; it's many AIs, working together, speaking the same protocol.</p>
+            </div>
+        </article>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Kamil Mościszko. <a href="/index.html">Back to Portfolio</a></p>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script>hljs.highlightAll();</script>
+</body>
+
+</html>
