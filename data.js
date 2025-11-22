@@ -74,5 +74,14 @@ export const blogPosts = [
         tags: ['Go', 'AI', 'UTCP', 'LLM', 'Architecture'],
         excerpt: 'A deep dive into building CodeMode UTCP - a system that enables LLMs to orchestrate Universal Tool Calling Protocol tools by generating and executing Go-like code snippets in a sandboxed environment.',
         link: '/blog/implementing-codemode-go-utcp.html'
+    },
+    {
+        id: 'agents-as-utcp-tools',
+        title: 'Agents as UTCP Tools: Unlocking Powerful Workflows with CodeMode',
+        date: '2025-11-22',
+        readTime: '10 min read',
+        tags: ['Agents', 'UTCP', 'CodeMode', 'Go', 'Multi-Agent'],
+        excerpt: 'Discover how exposing autonomous agents as UTCP tools enables complex, multi-agent workflows orchestrated by CodeMode, transforming how we build AI systems.',
+        link: '/blog/agents-as-utcp-tools.html'
     }
 ];
